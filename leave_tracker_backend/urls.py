@@ -24,6 +24,7 @@ router = routers.DefaultRouter()
 router.register('auth/all-users',
                 core.views.UsersViewSet, basename='all-users')
 urlpatterns = [
+    path('', include('core.urls')),
     path('admin/', admin.site.urls),
     path('leavetracker/', include('leavetracker.urls')),
     path('project/', include('project.urls')),

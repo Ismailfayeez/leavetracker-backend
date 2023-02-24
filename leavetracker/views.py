@@ -19,6 +19,10 @@ from .serializers import AbsenteesDetailSerializer, ApprovalInfoSerializer, Appr
 from django.db.models import Count, Sum, F, Q, ExpressionWrapper, IntegerField, DateField, Func
 from rest_framework.views import APIView
 from leavetracker.utils import get_current_date
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class MyAccountsViewSet(ListModelMixin, GenericViewSet):
@@ -89,6 +93,7 @@ class EmployeeViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet):
         return SimpleEmployeeSerializer
 
     def get_queryset(self):
+        logger.info("fetching all employees")
         current_employee = get_employee(self.request)
         return Employee.objects.select_related('user')\
             .filter(project=current_employee.project, status='A')\
