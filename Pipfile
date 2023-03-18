@@ -19,6 +19,7 @@ django = "==4.0.6"
 gunicorn = "*"
 reportlab = "*"
 openpyxl = "*"
+dj-database-url = "*"
 
 [dev-packages]
 autopep8 = "*"
