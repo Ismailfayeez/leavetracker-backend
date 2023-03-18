@@ -10,7 +10,6 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 
-from distutils import core
 from pathlib import Path
 from datetime import timedelta
 import os
