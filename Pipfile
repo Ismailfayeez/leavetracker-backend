@@ -17,6 +17,8 @@ pytz = "*"
 whitenoise = "*"
 django = "==4.0.6"
 gunicorn = "*"
+reportlab = "*"
+openpyxl = "*"
 
 [dev-packages]
 autopep8 = "*"

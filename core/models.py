@@ -21,6 +21,9 @@ class Module(models.Model):
     name = models.CharField(max_length=255)
     code = models.CharField(max_length=50)
 
+    def __str__(self) -> str:
+        return self.name
+
 
 class ModuleAccess(models.Model):
     user = models.ForeignKey(
@@ -29,3 +32,6 @@ class ModuleAccess(models.Model):
 
     class Meta:
         unique_together = [['user', 'module', ]]
+
+    def __str__(self) -> str:
+        return self.module.name

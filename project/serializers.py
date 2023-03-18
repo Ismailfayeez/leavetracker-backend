@@ -64,11 +64,12 @@ class CreateEmployeeSerializer(serializers.Serializer, RoleDomainValidation):
         return email
 
     def validate(self, data):
+        print("lalettan")
         project_id = self.context.get('project_id')
         email = data.get('email')
         if email and Employee.objects.filter(project=project_id, user__email=email).exists():
             raise serializers.ValidationError(
-                {"code": 'EMP.ACT.ALREADY.FOUND', "message": "Employee account already exists for this user"})
+                {"code": 'EMP.ACT.ALREADY.FOUND', "detail": "Employee account already exists for this user"})
         return data
 
     def save(self, **kwargs):
@@ -246,7 +247,6 @@ class CreateAdminRoleSerializer(serializers.ModelSerializer):
         fields = ['code', 'name']
 
     def validate(self, data):
-        print("qqqdwwdwddd")
         project_id = self.context.get("project_id")
         if ProjectAdminRole.objects.filter(code=data['code'], project=project_id).exists():
             raise serializers.ValidationError("Role already exists")

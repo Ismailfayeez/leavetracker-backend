@@ -1,6 +1,6 @@
 from .models import LeaveRequest
 from django.db.models.aggregates import Max, Min
-from .query_methods import get_latest_leave_request_no
+from .queries import get_latest_leave_request_no
 
 
 def generateOrderNumber(**kwargs):

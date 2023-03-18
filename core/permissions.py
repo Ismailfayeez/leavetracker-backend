@@ -2,7 +2,7 @@ from rest_framework import permissions
 from .models import ModuleAccess
 
 
-class hasModulePermission(permissions.BasePermission):
+class HasModulePermission(permissions.BasePermission):
     def __init__(self, access_code):
         self.access_code = access_code
 
