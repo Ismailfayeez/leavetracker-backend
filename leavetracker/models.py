@@ -230,6 +230,9 @@ class Team(models.Model):
     is_active = models.BooleanField(default=True)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
 
+    class Meta:
+        unique_together = [['name', 'project']]
+
 
 class TeamMember(models.Model):
     PARTICIPANT = 'P'
@@ -274,3 +277,24 @@ class EmployeeAccess(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
     access_code = models.ForeignKey(
         EmployeeAccessList, on_delete=models.CASCADE)
+
+
+class Announcement(models.Model):
+    HIGH = 'H'
+    MEDIUM = 'M'
+    LOW = 'L'
+    priority_choices = [(HIGH, 'high'), (MEDIUM, 'medium'),
+                        (LOW, 'low')]
+    title = models.CharField(max_length=200)
+    message = models.CharField(max_length=200)
+    expiry_date = models.DateField()
+    created_by = models.ForeignKey(Employee, on_delete=models.CASCADE)
+    priority = models.CharField(
+        max_length=1, choices=priority_choices, default=LOW)
+
+
+class AnnouncementTeam(models.Model):
+    announcement = models.ForeignKey(
+        Announcement, on_delete=models.CASCADE, related_name='announcement_team')
+    team = models.ForeignKey(
+        Team, on_delete=models.PROTECT, related_name="announcement_team")

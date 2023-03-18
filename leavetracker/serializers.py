@@ -4,14 +4,14 @@ from rest_framework import serializers
 from leavetracker.utils import calculate_overall_approval_status
 from leavetracker.validations import BaseTeamValidation
 from project.serializers import ProjectSerializer
-from .models import Access, Domain, Employee, Approver, EmployeeAccessList, FiscalYear, LeaveApproval, LeaveDate, LeaveDuration, LeaveRequest, LatestLeaveRequestNumber, LeaveType, Role, RoleAccess, Team, TeamMember, SubscribeTeam, EmployeeAccess
+from .models import Announcement, AnnouncementTeam, Access, Domain, Employee, Approver, EmployeeAccessList, FiscalYear, LeaveApproval, LeaveDate, LeaveDuration, LeaveRequest, LatestLeaveRequestNumber, LeaveType, Role, RoleAccess, Team, TeamMember, SubscribeTeam, EmployeeAccess
 from django.db import transaction
 from .services import generate_request_number
 from project.query_methods import get_my_projects
-from .query_methods import get_my_teams
+from .queries import get_my_teams
 import pytz
 from datetime import datetime
-from .utils import get_current_date
+from utilities.utils import get_current_date_in_user_timezone
 
 
 class MyEmployeeAccountsSerializer(serializers.ModelSerializer):
@@ -163,7 +163,7 @@ class LeaveTypeSerializer(serializers.ModelSerializer):
         fields = ['id', 'code', 'name', 'hours', 'days', 'status', 'is_close']
 
 
-class SimpleLeaveTypeSerializer(serializers.ModelSerializer):
+class SimpleLeaveDurationSerializer(serializers.ModelSerializer):
     class Meta:
         model = LeaveDuration
         fields = ['code', 'name']
@@ -204,8 +204,14 @@ class ApproverSerializer(serializers.ModelSerializer):
 
 class ApproverListSerializer(serializers.ListSerializer):
     def validate(self, data):
-        print(data, "list")
+        employee = self.context.get('employee')
+        existing_approvers = Approver.objects.filter(
+            employee__user=employee.user, employee__project=employee.project)
         validation_set = set()
+        if not len(data)+existing_approvers.count() <= 3:
+            raise serializers.ValidationError({
+                'detail': 'user can only have maximum upto 3 approvers'
+            })
         for item in data:
             if item["email"] in validation_set:
                 raise serializers.ValidationError(
@@ -226,6 +232,7 @@ class CreateApproverSerializer(serializers.Serializer):
         employee = self.context.get('employee')
         approver = Employee.objects.filter(
             project=employee.project, user__email=email, status='A').first()
+
         if employee.user == email:
             raise serializers.ValidationError(
                 f'approver email cannot be same as user email')
@@ -237,19 +244,16 @@ class CreateApproverSerializer(serializers.Serializer):
 
     def validate(self, data):
         employee = self.context.get('employee')
-        data_length = self.context.get('data_length')
         existing_approvers = Approver.objects.filter(
             employee__user=employee.user, employee__project=employee.project)
         if existing_approvers.filter(approver__user__email=data['email']).exists():
             raise serializers.ValidationError(
                 f'''{data['email']} already added as approver''')
-        if not existing_approvers.count()+data_length <= 3:
-            raise serializers.ValidationError(
-                f'''user can only have maximum upto 3 approvers''')
         return data
 
     def create(self, validated_data):
         with transaction.atomic():
+            print(self.context.get('employee'), validated_data)
             employee = self.context.get('employee')
             new_approver = Approver(
                 employee=employee, approver=Employee.objects.get(user__email=validated_data['email'], project=employee.project))
@@ -305,7 +309,7 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
                                                read_only=True,
                                                slug_field='date')
     type = SimpleLeaveTypeSerializer()
-    duration = SimpleLeaveTypeSerializer()
+    duration = SimpleLeaveDurationSerializer()
     status = serializers.CharField(source='get_status_display')
     status_code = serializers.CharField(source='status')
     created_at = serializers.SerializerMethodField(
@@ -326,7 +330,7 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
 
     def get_is_delete(self, leave):
         user = self.context.get('user')
-        current_date = get_current_date(user.timezone)
+        current_date = get_current_date_in_user_timezone(user.timezone)
         if leave.status == 'P' and leave.from_date > current_date and leave.to_date > current_date:
             return True
         return False
@@ -359,7 +363,8 @@ class CreateLeaveRequestSerializer(serializers.Serializer):
 
     def validate_from_date(self, from_date):
         employee = self.context['employee']
-        current_date = get_current_date(employee.user.timezone)
+        current_date = get_current_date_in_user_timezone(
+            employee.user.timezone)
         if from_date < current_date:
             raise serializers.ValidationError(
                 'Should not be less than current calendar date')
@@ -367,7 +372,8 @@ class CreateLeaveRequestSerializer(serializers.Serializer):
 
     def validate_to_date(self, to_date):
         employee = self.context['employee']
-        current_date = get_current_date(employee.user.timezone)
+        current_date = get_current_date_in_user_timezone(
+            employee.user.timezone)
         if to_date < current_date:
             raise serializers.ValidationError(
                 'Should not be less than current calendar date')
@@ -448,8 +454,8 @@ class CreateLeaveRequestSerializer(serializers.Serializer):
 
 class ApprovalSerializer(serializers.ModelSerializer):
 
-    type = serializers.CharField(source='request_number.type')
-    duration = serializers.CharField(source='request_number.duration')
+    type = SimpleLeaveTypeSerializer(source='request_number.type')
+    duration = SimpleLeaveDurationSerializer(source='request_number.duration')
     request_number = serializers.IntegerField(
         source='request_number.request_number')
     request_id = serializers.PrimaryKeyRelatedField(
@@ -460,7 +466,7 @@ class ApprovalSerializer(serializers.ModelSerializer):
         read_only=True, source="get_approver_status_display")
     your_status_code = serializers.CharField(
         read_only=True, source="approver_status")
-    employee = serializers.EmailField(source='request_number.employee.user')
+    employee = SimpleEmployeeSerializer(source='request_number.employee')
     status = serializers.CharField(
         source='request_number.get_status_display')
     status_code = serializers.CharField(
@@ -494,7 +500,7 @@ class UpdateApprovalSerializer(serializers.ModelSerializer):
             leave_approval__id=approval_id).first()
         if leave is None:
             raise serializers.ValidationError("leave is not available")
-        requestor_current_date = get_current_date(
+        requestor_current_date = get_current_date_in_user_timezone(
             leave.employee.user.timezone)
         if leave.from_date < requestor_current_date:
             raise serializers.ValidationError(
@@ -528,6 +534,12 @@ class TeamSerializer(serializers.ModelSerializer):
     class Meta:
         model = Team
         fields = "__all__"
+
+
+class SimpleTeamSerializer1(serializers.ModelSerializer):
+    class Meta:
+        model = Team
+        fields = ['name', 'description']
 
 
 class SimpleTeamSerializer(serializers.ModelSerializer):
@@ -966,4 +978,84 @@ class CreateEmployeeList(serializers.Serializer):
             employee=employee, access_code=access_instance) for access_instance in new_access_list]
         self.instance = EmployeeAccess.objects.bulk_create(
             new_admin_access_list)
+        return self.instance
+
+
+class SimpleAnnouncementTeamSerializer(serializers.ModelSerializer):
+    team_id = serializers.CharField(source='team.id')
+    name = serializers.CharField(source='team.name')
+    description = serializers.CharField(source='team.description')
+
+    class Meta:
+        model = AnnouncementTeam
+        fields = ["name", 'description', 'team_id']
+
+
+class AnnouncementSerializer(serializers.ModelSerializer):
+    teams = SimpleAnnouncementTeamSerializer(
+        source='announcement_team', many=True)
+    priority = serializers.CharField(source='get_priority_display')
+
+    class Meta:
+        model = Announcement
+        fields = ['id', 'title', 'message', 'teams', 'priority', 'expiry_date']
+
+
+class SimpleAnnouncementSerializer(serializers.ModelSerializer):
+    created_by = serializers.CharField(source='created_by.user.username')
+    priority = serializers.CharField(source='get_priority_display')
+
+    class Meta:
+        model = Announcement
+        fields = ['id', 'title', 'message',
+                  'priority', 'expiry_date', 'created_by']
+
+
+class CreateAnnouncementSerializer(serializers.Serializer):
+    title = serializers.CharField()
+    message = serializers.CharField()
+    expiry_date = serializers.DateField()
+    team_list = serializers.ListSerializer(
+        child=serializers.CharField(), allow_empty=False)
+    priority = serializers.CharField(required=False)
+
+    def validate_title(self, title):
+        return title
+
+    def validate_expiry_date(self, expiry_date):
+        employee = self.context.get('employee')
+        current_date = get_current_date_in_user_timezone(
+            employee.user.timezone)
+        diff = expiry_date-current_date
+        if expiry_date <= current_date:
+            raise serializers.ValidationError(
+                "expiry date cannot be less than current date")
+        if diff.days >= 30:
+            raise serializers.ValidationError(
+                "expiry date cannot be greater than 30 days from current date")
+        return expiry_date
+
+    def validate_team_list(self, team_list):
+        employee = self.context.get('employee')
+        teams = Team.objects.filter(
+            id__in=team_list, project=employee.project, team_members__employee=employee)
+        if len(teams) != len(set(team_list)):
+            raise serializers.ValidationError(
+                "Announcement cannot be triggered for the groups that you not belong")
+        return team_list
+
+    def create(self, validated_data):
+        employee = self.context.get('employee')
+        team_queryset = Team.objects.filter(
+            id__in=validated_data.get("team_list"))
+        new_announcement = Announcement(title=validated_data.get(
+            "title"), message=validated_data.get("message"), expiry_date=validated_data.get("expiry_date"),
+            created_by=employee)
+        if validated_data.get('priority') is not None:
+            new_announcement.priority = validated_data.get('priority')
+        new_announcement.save()
+        new_announcement_team_list = [AnnouncementTeam(
+            announcement=new_announcement, team=team) for team in team_queryset]
+        AnnouncementTeam.objects.bulk_create(new_announcement_team_list)
+        self.instance = new_announcement
         return self.instance

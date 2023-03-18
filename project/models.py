@@ -18,6 +18,9 @@ class Project(models.Model):
     status = models.CharField(choices=PROJECT_STATUS,
                               default=PROJECT_ACTIVE, max_length=1)
 
+    def __str__(self) -> str:
+        return self.name
+
 
 class ProjectInfo(models.Model):
     project = models.OneToOneField(Project, on_delete=models.CASCADE)

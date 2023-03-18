@@ -2,7 +2,7 @@ from rest_framework import permissions
 from rest_framework.permissions import IsAuthenticated
 from .models import ProjectOwner, ProjectAdmin, ProjectAdminRoleAccess
 from .query_methods import get_my_projects
-from core.permissions import hasModulePermission
+from core.permissions import HasModulePermission
 from core.constants import PERMISSION_ACCESS_CODE as MODULE_PERMISSION_CODE
 from .constants import PERMISSION_ACCESS_CODE as PROJECT_PERMISSION_CODE
 
@@ -52,7 +52,7 @@ def is_authenticated_user():
 
 
 def is_user_has_module_permission(code):
-    return [IsAuthenticated(), hasModulePermission(MODULE_PERMISSION_CODE[code])]
+    return [IsAuthenticated(), HasModulePermission(MODULE_PERMISSION_CODE[code])]
 
 
 def is_user_project_member():

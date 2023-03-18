@@ -1,11 +1,12 @@
+from .models import User
+from leavetracker.serializers import SimpleUserSerializer
 from django.http import Http404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.mixins import ListModelMixin
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.filters import SearchFilter
-from leavetracker.serializers import SimpleUserSerializer
-from .models import User
+from rest_framework.permissions import AllowAny
 import pytz
 # Create your views here.
 
@@ -13,15 +14,16 @@ import pytz
 class UsersViewSet(ListModelMixin, GenericViewSet):
     filter_backends = [SearchFilter]
     search_fields = ['username', 'email']
+    serializer_class = SimpleUserSerializer
 
     def get_queryset(self):
         return User.objects.filter(
             is_active=True)
-    serializer_class = SimpleUserSerializer
 
 
 class Country(APIView):
     http_method_names = ['get']
+    permission_classes = [AllowAny]
 
     def get(self, request):
         query_params = request.query_params
@@ -39,6 +41,7 @@ class Country(APIView):
 
 class TimeZone(APIView):
     http_method_names = ['get']
+    permission_classes = [AllowAny]
 
     def get(self, request):
         query_params = request.query_params
