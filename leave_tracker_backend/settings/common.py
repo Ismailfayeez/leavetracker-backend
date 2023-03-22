@@ -61,6 +61,7 @@ ROOT_URLCONF = 'leave_tracker_backend.urls'
 CORS_ORIGIN_ALLOW_ALL = False
 CORS_ORIGIN_WHITELIST = (
     'http://localhost:3000',
+    'https://leave-tracker-backend.onrender.com/'
 )
 
 TEMPLATES = [
