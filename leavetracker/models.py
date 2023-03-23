@@ -289,6 +289,7 @@ class Announcement(models.Model):
     message = models.CharField(max_length=200)
     expiry_date = models.DateField()
     created_by = models.ForeignKey(Employee, on_delete=models.CASCADE)
+    created_on = models.DateTimeField(auto_now=True)
     priority = models.CharField(
         max_length=1, choices=priority_choices, default=LOW)
 
@@ -298,3 +299,13 @@ class AnnouncementTeam(models.Model):
         Announcement, on_delete=models.CASCADE, related_name='announcement_team')
     team = models.ForeignKey(
         Team, on_delete=models.PROTECT, related_name="announcement_team")
+
+
+class AnnouncementViewedEmployee(models.Model):
+    announcement = models.ForeignKey(
+        Announcement, on_delete=models.CASCADE, related_name='announcement_viewed_by')
+    employee = models.ForeignKey(
+        Employee, on_delete=models.CASCADE, related_name='announcement_viewed_by')
+
+    class Meta:
+        unique_together = [['announcement', 'employee']]

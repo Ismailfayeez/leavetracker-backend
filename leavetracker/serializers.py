@@ -4,7 +4,7 @@ from rest_framework import serializers
 from leavetracker.utils import calculate_overall_approval_status
 from leavetracker.validations import BaseTeamValidation
 from project.serializers import ProjectSerializer
-from .models import Announcement, AnnouncementTeam, Access, Domain, Employee, Approver, EmployeeAccessList, FiscalYear, LeaveApproval, LeaveDate, LeaveDuration, LeaveRequest, LatestLeaveRequestNumber, LeaveType, Role, RoleAccess, Team, TeamMember, SubscribeTeam, EmployeeAccess
+from .models import Announcement, AnnouncementTeam, AnnouncementViewedEmployee, Access, Domain, Employee, Approver, EmployeeAccessList, FiscalYear, LeaveApproval, LeaveDate, LeaveDuration, LeaveRequest, LatestLeaveRequestNumber, LeaveType, Role, RoleAccess, Team, TeamMember, SubscribeTeam, EmployeeAccess
 from django.db import transaction
 from .services import generate_request_number
 from project.query_methods import get_my_projects
@@ -600,7 +600,6 @@ class TeamMemberSerializer(serializers.ModelSerializer):
 
     def get_allow_remove(self, team_member):
         is_user_team_admin = self.context.get('is_current_user_team_admin')
-        print(is_user_team_admin)
         employee = self.context.get('employee')
         if (is_user_team_admin and employee):
             if team_member.employee != employee:
@@ -1004,11 +1003,23 @@ class AnnouncementSerializer(serializers.ModelSerializer):
 class SimpleAnnouncementSerializer(serializers.ModelSerializer):
     created_by = serializers.CharField(source='created_by.user.username')
     priority = serializers.CharField(source='get_priority_display')
+    viewed_by = serializers.SerializerMethodField(
+        method_name='get_viewed_by_employee')
+
+    def get_viewed_by_employee(self, announcement):
+        employee = self.context.get("employee")
+        print(employee, announcement)
+        try:
+            AnnouncementViewedEmployee.objects.get(
+                employee=employee, announcement=announcement)
+            return True
+        except:
+            return False
 
     class Meta:
         model = Announcement
         fields = ['id', 'title', 'message',
-                  'priority', 'expiry_date', 'created_by']
+                  'priority', 'expiry_date', 'created_by', 'viewed_by']
 
 
 class CreateAnnouncementSerializer(serializers.Serializer):

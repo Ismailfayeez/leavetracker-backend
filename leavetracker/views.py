@@ -3,7 +3,7 @@ from .constants import basic_table_style, style_title, style_body, style_not_fou
 from .validations import validate_my_groups_report_section_id
 from .queries import get_employee, get_fiscal_month, get_my_teams, get_absentees_from_my_team, get_team_members, get_subscribed_teams, filter_leave_dates_by_type, get_leave_count, get_absentees_from_subscribed_groups, get_all_teams, get_leaves, get_approvals, get_is_user_team_admin
 from .permissions import IsEmployee
-from .models import Announcement, Domain, Employee, Approver, FiscalYear, LeaveApproval, LeaveDate, LeaveDuration, LeaveType, Role, SubscribeTeam, Team, TeamMember, LTAccountPreference
+from .models import Announcement, AnnouncementViewedEmployee, Domain, Employee, Approver, FiscalYear, LeaveApproval, LeaveDate, LeaveDuration, LeaveType, Role, SubscribeTeam, Team, TeamMember, LTAccountPreference
 from .serializers import SimpleAnnouncementSerializer, AnnouncementSerializer, CreateAnnouncementSerializer, AbsenteesDetailSerializer, ApprovalInfoSerializer, ApproverSerializer, CreateLeaveRequestSerializer, CreateTeamMemberSerializer, CreateTeamSerializer, EmployeeSerializer, MyEmployeeAccountsSerializer, RetrieveTeamSerializer, GroupsLeaveCountSerializer, LeaveBalanceSerializer, LeaveDatesSerializer, LeaveDurationSerializer, LeaveTypeSerializer, SimpleAllTeamSerializer, SimpleDomainSerializer, SimpleEmployeeSerializer, SimpleLeaveRequestSerializer, LeaveRequestSerializer, ListSubscribeTeamSerializer, MyInfoSerializer, CreateApproverSerializer, SimpleRoleSerializer, SimpleTeamSerializer, SimpleUserSerializer, SubscribeEmployeeSerializer, SubscribeSerializer, SubscribeTeamSerializer, TeamAnalysisMembersSerializer, TeamAnalysisSerializer, AbsenteesTeamSerializer,  TeamMemberSerializer, TeamSerializer, ApprovalSerializer, UpdateApprovalSerializer, UpdateTeamMemberSerializer, UpdateTeamSerializer
 from project.models import Project
 from project.serializers import SimpleProjectSerializer
@@ -691,34 +691,6 @@ class FinancialYearList(APIView):
         return Response(fy_list)
 
 
-class AnnouncementViewSet(ModelViewSet):
-    permission_classes = [IsAuthenticated, IsEmployee]
-    http_method_names = ['get', 'post']
-
-    def get_serializer_class(self):
-        if self.request.method == "POST":
-            return CreateAnnouncementSerializer
-        if self.action == 'retrieve':
-            return AnnouncementSerializer
-        return SimpleAnnouncementSerializer
-
-    def get_queryset(self):
-        user = self.request.user
-        employee = get_employee(user)
-        date = get_current_date_in_user_timezone(user.timezone)
-        return Announcement.objects.filter(announcement_team__team__team_members__employee=employee,
-                                           expiry_date__gte=date).distinct('id')
-
-    def create(self, request, *args, **kwargs):
-        employee = get_employee(self.request.user)
-        serializer = CreateAnnouncementSerializer(
-            data=request.data, context={'employee': employee})
-        serializer.is_valid(raise_exception=True)
-        new_announcement = serializer.save()
-        result = SimpleAnnouncementSerializer(new_announcement)
-        return Response(result.data)
-
-
 class MyGroupsReport(APIView):
     permission_classes = [IsAuthenticated, IsEmployee]
 
@@ -909,3 +881,57 @@ class AllGroupsExcelReport(APIView):
         buffer.seek(0)
         return FileResponse(buffer,  content_type='application/vnd.ms-excel',
                             as_attachment=True, filename='absentees.xlsx')
+
+
+class AnnouncementViewSet(ModelViewSet):
+    permission_classes = [IsAuthenticated, IsEmployee]
+    http_method_names = ['get', 'post']
+
+    @action(detail=False, methods=['post'])
+    def viewed_by(self, request):
+        user = self.request.user
+        employee = get_employee(user)
+        queryset = self.get_queryset()
+        announcement_viewed_records = []
+        for announcement in queryset:
+            try:
+                AnnouncementViewedEmployee.objects.get(
+                    announcement=announcement, employee=employee)
+            except:
+                i = AnnouncementViewedEmployee(
+                    employee=employee, announcement=announcement)
+                announcement_viewed_records.append(i)
+        AnnouncementViewedEmployee.objects.bulk_create(
+            announcement_viewed_records)
+        serializer = SimpleAnnouncementSerializer(
+            queryset, many=True, context={"employee": employee})
+        return Response(serializer.data)
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return CreateAnnouncementSerializer
+        if self.action == 'retrieve':
+            return AnnouncementSerializer
+        return SimpleAnnouncementSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        employee = get_employee(user)
+        date = get_current_date_in_user_timezone(user.timezone)
+        return Announcement.objects.prefetch_related('announcement_viewed_by')\
+            .filter(announcement_team__team__team_members__employee=employee, expiry_date__gte=date)\
+            .order_by('-id', '-created_on').distinct('id')
+
+    def get_serializer_context(self):
+        user = self.request.user
+        employee = get_employee(user)
+        return {"employee": employee}
+
+    def create(self, request, *args, **kwargs):
+        employee = get_employee(self.request.user)
+        serializer = CreateAnnouncementSerializer(
+            data=request.data, context={'employee': employee})
+        serializer.is_valid(raise_exception=True)
+        new_announcement = serializer.save()
+        result = SimpleAnnouncementSerializer(new_announcement)
+        return Response(result.data)
