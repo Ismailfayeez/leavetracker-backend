@@ -105,15 +105,20 @@ class UpdateEmployeeSerializer(serializers.Serializer, RoleDomainValidation):
         employee = Employee.objects.get(
             user__email=instance, project=project_id)
         update_employee = employee
-        print(validated_data.get('role'), validated_data.get('domain'))
-        if validated_data.get('role', {}).get('code'):
-            role = Role.objects.get(
-                code=validated_data.get('role', {}).get('code'), project=project_id)
-            update_employee.role = role
-        if validated_data.get('domain', {}).get('code'):
-            domain = Domain.objects.get(
-                code=validated_data.get('domain', {}).get('code'), project=project_id)
-            update_employee.domain = domain
+        if validated_data.get('role', {}).get('code') is not None:
+            if(validated_data.get('role', {}).get('code') == ""):
+                update_employee.role = None
+            else:
+                role = Role.objects.get(
+                    code=validated_data.get('role', {}).get('code'), project=project_id)
+                update_employee.role = role
+        if validated_data.get('domain', {}).get('code') is not None:
+            if(validated_data.get('domain', {}).get('code') == ""):
+                update_employee.domain = None
+            else:
+                domain = Domain.objects.get(
+                    code=validated_data.get('domain', {}).get('code'), project=project_id)
+                update_employee.domain = domain
         update_employee.save()
         return update_employee
 

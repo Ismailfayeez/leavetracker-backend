@@ -284,7 +284,7 @@ class ApprovalViewSet(ListModelMixin, RetrieveModelMixin, UpdateModelMixin, Gene
             elif approval_status == 'not-actioned':
                 status_list = ['P']
             approval_list = filter(
-                lambda approval: approval.request_number.status in status_list, approval_list)
+                lambda approval: approval.approver_status in status_list, approval_list)
         serializer = self.get_serializer(approval_list, many=True)
         return Response(serializer.data)
 

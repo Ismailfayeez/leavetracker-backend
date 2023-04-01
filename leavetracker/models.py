@@ -298,7 +298,7 @@ class AnnouncementTeam(models.Model):
     announcement = models.ForeignKey(
         Announcement, on_delete=models.CASCADE, related_name='announcement_team')
     team = models.ForeignKey(
-        Team, on_delete=models.PROTECT, related_name="announcement_team")
+        Team, on_delete=models.CASCADE, related_name="announcement_team")
 
 
 class AnnouncementViewedEmployee(models.Model):
