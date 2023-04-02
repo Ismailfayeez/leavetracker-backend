@@ -696,6 +696,7 @@ class MyGroupsReport(APIView):
 
     def get(self, request):
         employee = get_employee(self.request.user)
+        project_name = employee.project.name
         allowed_section_list = [1, 2]
         query_params = self.request.query_params
         sections = query_params.get('sections')
@@ -716,9 +717,6 @@ class MyGroupsReport(APIView):
 
         # Create a list of flowables to build the PDF content
         flowables = []
-        doc.onFirstPage = get_header_footer
-        doc.onLaterPages = get_header_footer
-
         # add group title to report:
         flowables.append(Paragraph(team.name, style_title))
         # adding each sections in report
@@ -777,8 +775,10 @@ class MyGroupsReport(APIView):
                 flowables.append(table)
             flowables.append(Spacer(1, 0.15*inch))
 
-        doc.build(flowables, onFirstPage=get_header_footer,
-                  onLaterPages=get_header_footer)
+        doc.build(flowables, onFirstPage=lambda canvas, doc: get_header_footer(
+            canvas, doc, project_name),
+            onLaterPages=lambda canvas, doc: get_header_footer(
+            canvas, doc, project_name))
         buffer.seek(0)
         return FileResponse(buffer, as_attachment=True, filename='my_groups_leave_analysis.pdf')
 
@@ -788,6 +788,7 @@ class AllGroupsReport(APIView):
 
     def get(self, request):
         employee = get_employee(self.request.user)
+        project_name = employee.project.name
         query_params = self.request.query_params
         date_string = query_params.get('date')
         date = ''
@@ -809,8 +810,6 @@ class AllGroupsReport(APIView):
                                 leftMargin=0.25*inch, topMargin=0.5*inch, bottomMargin=0.5*inch)
         # Create a list of flowables to build the PDF content
         flowables = []
-        doc.onFirstPage = get_header_footer
-        doc.onLaterPages = get_header_footer
         if not len(subscribed_teams):
             return Response(status=400, data='please subscribe atleast one team to generate report')
         # add group title to report:
@@ -839,8 +838,8 @@ class AllGroupsReport(APIView):
                 flowables.append(
                     Paragraph(f'No absentees found in subscribed groups', style_not_found_text))
 
-        doc.build(flowables, onFirstPage=get_header_footer,
-                  onLaterPages=get_header_footer)
+        doc.build(flowables, onFirstPage=lambda canvas, doc: get_header_footer(canvas, doc, project_name),
+                  onLaterPages=lambda canvas, doc: get_header_footer(canvas, doc, project_name))
         buffer.seek(0)
         return FileResponse(buffer, as_attachment=True, filename='all_group_leave_analysis.pdf')
 

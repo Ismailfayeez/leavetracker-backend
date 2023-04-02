@@ -36,7 +36,7 @@ def get_server_time_in_string():
     return utc_datetime.strftime('%Y-%m-%d %H:%M:%S')
 
 
-def get_header_footer(canvas, doc):
+def get_header_footer(canvas, doc, project_name=''):
     canvas.saveState()
     # header
     x1, y1 = 20, 765
@@ -44,6 +44,7 @@ def get_header_footer(canvas, doc):
     canvas.line(x1, y1, x2, y2)
     header_text = "Track it"
     canvas.setFont('Helvetica', 12)
+    canvas.drawString(20, 770, project_name)
     canvas.drawString(550, 770, header_text)
     canvas.setStrokeColorRGB(0, 0, 0)  # black
     canvas.setLineWidth(1)
