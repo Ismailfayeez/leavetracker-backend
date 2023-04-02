@@ -15,7 +15,6 @@ class MultiValueCharFilter(filters.BaseCSVFilter, filters.CharFilter):
                 (Q(**{f'{self.field_name}__{self.lookup_expr}': v})
                  for v in values)
             )
-            print(expr)
         if expr is not None:
             return qs.filter(expr)
         else:
