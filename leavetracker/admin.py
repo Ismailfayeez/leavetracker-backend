@@ -28,3 +28,4 @@ class ProjectAdminAccessAdmin(admin.ModelAdmin):
 
 admin.site.register(models.User)
 admin.site.register(models.Module)
+admin.site.register(leavetracker_models.Team)
