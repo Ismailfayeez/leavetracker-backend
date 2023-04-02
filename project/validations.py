@@ -20,7 +20,6 @@ class RoleDomainValidation():
 
 class AdminRoleValidation():
     def validate_role(self, role):
-        print(role)
         if not role:
             return None
         project_id = self.context.get("project_id")

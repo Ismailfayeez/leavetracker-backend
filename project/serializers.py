@@ -64,7 +64,6 @@ class CreateEmployeeSerializer(serializers.Serializer, RoleDomainValidation):
         return email
 
     def validate(self, data):
-        print("lalettan")
         project_id = self.context.get('project_id')
         email = data.get('email')
         if email and Employee.objects.filter(project=project_id, user__email=email).exists():

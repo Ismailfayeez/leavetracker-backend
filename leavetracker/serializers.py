@@ -253,7 +253,6 @@ class CreateApproverSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         with transaction.atomic():
-            print(self.context.get('employee'), validated_data)
             employee = self.context.get('employee')
             new_approver = Approver(
                 employee=employee, approver=Employee.objects.get(user__email=validated_data['email'], project=employee.project))
@@ -1008,7 +1007,6 @@ class SimpleAnnouncementSerializer(serializers.ModelSerializer):
 
     def get_viewed_by_employee(self, announcement):
         employee = self.context.get("employee")
-        print(employee, announcement)
         try:
             AnnouncementViewedEmployee.objects.get(
                 employee=employee, announcement=announcement)

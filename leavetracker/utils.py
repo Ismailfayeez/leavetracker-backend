@@ -5,7 +5,6 @@ from utilities.utils import get_current_date_in_user_timezone
 
 def calculate_overall_approval_status(status_list):
     unique_list = set(status_list)
-    print(unique_list, status_list)
     if "C" in unique_list:
         return "C"
     if "R" in unique_list:

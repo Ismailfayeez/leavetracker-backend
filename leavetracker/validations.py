@@ -5,7 +5,6 @@ from utilities.error import CustomApiResponseError
 
 class BaseTeamValidation():
     def validate_name(self, name):
-        print(self.instance)
         employee = self.context.get('employee')
         if(5 > len(name) or len(name) > 25):
             raise serializers.ValidationError(

@@ -434,7 +434,6 @@ class MyTeamMemberViewSet(ModelViewSet):
                                                  team_id=team_id)
         if len(team_members) <= 2:
             return Response("Minimum 2 members should be present in the group", status=400)
-        print(requested_member.employee == employee)
 
         if employee == requested_member.employee:
             if len(team_members.filter(role='A')) <= 1:
@@ -532,7 +531,6 @@ class AbsenteesViewSet(ListModelMixin, GenericViewSet):
         if date is not None:
             queryset = queryset.filter(
                 employee__leave_request__leave_dates__date=date)
-            print(queryset)
         employee_id = query_params.get('emp')
         if employee_id is not None:
             absentee = queryset.filter(employee=employee_id)
@@ -874,7 +872,6 @@ class AllGroupsExcelReport(APIView):
         values = [[obj[column['key']]
                    for column in absentees_excel_columns] for obj in absentees]
         for record in values:
-            print(record)
             sheet.append(record)
         wb.save(buffer)
         buffer.seek(0)
