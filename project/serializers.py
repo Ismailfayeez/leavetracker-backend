@@ -381,7 +381,7 @@ class AdminSerializer(serializers.ModelSerializer):
     is_delete = serializers.BooleanField(read_only=True)
     email = serializers.EmailField(source='user.email')
     name = serializers.EmailField(source='user.username')
-    role = serializers.CharField(source='role.code', default=None)
+    role = SimpleAdminRoleSerializer()
 
     class Meta:
         model = ProjectAdmin
