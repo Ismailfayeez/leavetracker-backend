@@ -203,7 +203,6 @@ class LeaveRequestViewSet(ListModelMixin, RetrieveModelMixin, CreateModelMixin, 
         user = self.request.user
         current_date = get_current_date_in_user_timezone(user.timezone)
         obj = self.get_object()
-        print(obj.status)
         allowed_leave_delete_status = ['P', 'R']
         if obj.status not in allowed_leave_delete_status:
             return Response(data={
