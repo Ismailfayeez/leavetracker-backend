@@ -645,6 +645,7 @@ class LeaveBalanceViewSet(ModelViewSet):
         current_fiscal_year = fiscal_year.get_fy_period(year)
         leave_taken = ExpressionWrapper(
             Count('leave_request__leave_dates__date', filter=Q(
+                Q(leave_request__status='A') | Q(leave_request__status='P'),
                 leave_request__employee=employee,
                 leave_request__leave_dates__date__gte=current_fiscal_year['start_dt'],
                 leave_request__leave_dates__date__lte=current_fiscal_year['end_dt'])),
