@@ -36,7 +36,7 @@ def get_absentees_from_subscribed_groups(employee, date):
 
 def get_leaves(employee, leave_id=None):
     queryset = LeaveRequest.objects.prefetch_related('leave_dates').select_related('type')\
-        .select_related('duration').filter(employee=employee, status='A')
+        .select_related('duration').filter(employee=employee)
     if leave_id is not None:
         try:
             queryset.get(id=leave_id)
