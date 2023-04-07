@@ -330,7 +330,7 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
     def get_is_delete(self, leave):
         user = self.context.get('user')
         current_date = get_current_date_in_user_timezone(user.timezone)
-        if leave.status == 'P' and leave.from_date > current_date and leave.to_date > current_date:
+        if (leave.status == 'P' or leave.status == 'R') and leave.from_date > current_date and leave.to_date > current_date:
             return True
         return False
 
