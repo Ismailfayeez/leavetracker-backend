@@ -203,9 +203,9 @@ class LeaveRequestViewSet(ListModelMixin, RetrieveModelMixin, CreateModelMixin, 
         user = self.request.user
         current_date = get_current_date_in_user_timezone(user.timezone)
         obj = self.get_object()
-        if obj.status != 'P':
+        if obj.status != 'P' or obj.status != 'R':
             return Response(data={
-                "message": "Leave is not in pending status"
+                "message": "Leave is not in pending/rejected status"
             }, status=400)
         if not (obj.from_date > current_date and obj.to_date > current_date):
             return Response(data={
