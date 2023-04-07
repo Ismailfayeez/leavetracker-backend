@@ -203,7 +203,9 @@ class LeaveRequestViewSet(ListModelMixin, RetrieveModelMixin, CreateModelMixin, 
         user = self.request.user
         current_date = get_current_date_in_user_timezone(user.timezone)
         obj = self.get_object()
-        if obj.status != 'P' or obj.status != 'R':
+        print(obj.status)
+        allowed_leave_delete_status = ['P', 'R']
+        if obj.status not in allowed_leave_delete_status:
             return Response(data={
                 "message": "Leave is not in pending/rejected status"
             }, status=400)
@@ -530,7 +532,7 @@ class AbsenteesViewSet(ListModelMixin, GenericViewSet):
         queryset = self.get_queryset()
         if date is not None:
             queryset = queryset.filter(
-                employee__leave_request__leave_dates__date=date)
+                employee__leave_request__leave_dates__date=date, employee__leave_request__status='A')
         employee_id = query_params.get('emp')
         if employee_id is not None:
             absentee = queryset.filter(employee=employee_id)
@@ -540,7 +542,7 @@ class AbsenteesViewSet(ListModelMixin, GenericViewSet):
             absentee_info = result.get(employee_id)
             if absentee_info is not None:
                 query_set = LeaveDate.objects.filter(
-                    date__gt=date, request_number__employee=employee_id)
+                    date__gt=date, request_number__employee=employee_id, request_number__status='A')
                 leave_dates_serializer = LeaveDatesSerializer(
                     query_set, many=True)
                 absentee_info['upcoming_leaves'] = [leave['date']
@@ -577,7 +579,8 @@ class GroupsLeaveCountViewSet(ListModelMixin, GenericViewSet):
         except:
             return Response("Date required")
         queryset = self.get_queryset()
-        queryset = queryset.filter(team__team_members__employee__leave_request__leave_dates__date=date).annotate(
+        queryset = queryset.filter(team__team_members__employee__leave_request__leave_dates__date=date,
+                                   team__team_members__employee__leave_request__status='A').annotate(
             leave_count=Count('team__team_members__employee__leave_request')).order_by('team__name')[:5]
         serializer = GroupsLeaveCountSerializer(queryset, many=True)
         return Response(serializer.data)
@@ -625,9 +628,11 @@ class LeaveBalanceViewSet(ModelViewSet):
         fiscal_month = FiscalYear.objects.get(project=employee.project)
         fiscal_year = FiscalYearInfo(fiscal_month.month)
         current_fiscal_year = fiscal_year.get_fy_period(year)
-        leave_taken = LeaveDate.objects.filter(date__gte=current_fiscal_year['start_dt'],
+        leave_taken = LeaveDate.objects.filter(Q(request_number__status='A') | Q(request_number__status='P'),
+                                               date__gte=current_fiscal_year['start_dt'],
                                                date__lte=current_fiscal_year['end_dt'],
-                                               request_number__employee=employee, request_number__type__status='A').aggregate(leave_taken=Count('date'))
+                                               request_number__employee=employee,
+                                               request_number__type__status='A').aggregate(leave_taken=Count('date'))
         total = LeaveType.objects.filter(project=employee.project, status='A').aggregate(
             total=Sum('days'))
         return Response({"leave_taken": leave_taken.get('leave_taken'), "total": total.get('total')})

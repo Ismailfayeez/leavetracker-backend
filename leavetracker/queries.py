@@ -23,20 +23,20 @@ def get_employee(user):
 
 def get_absentees_from_my_team(team_id, date):
     queryset = LeaveRequest.objects.filter(
-        employee__teams__team=team_id, leave_dates__date=date)
+        employee__teams__team=team_id, leave_dates__date=date, status='A')
     return queryset
 
 
 def get_absentees_from_subscribed_groups(employee, date):
     queryset = LeaveRequest.objects.select_related('employee__user').select_related('employee__teams__team')\
         .filter(employee__teams__team__subscribed_teams__employee=employee)\
-        .filter(leave_dates__date=date)
+        .filter(leave_dates__date=date, status='A')
     return queryset
 
 
 def get_leaves(employee, leave_id=None):
     queryset = LeaveRequest.objects.prefetch_related('leave_dates').select_related('type')\
-        .select_related('duration').filter(employee=employee)
+        .select_related('duration').filter(employee=employee, status='A')
     if leave_id is not None:
         try:
             queryset.get(id=leave_id)
@@ -64,14 +64,17 @@ def filter_leave_dates_by_type(base_query, query_params):
             year = query_params.get('year')
             if year is not None:
                 return base_query.filter(
-                    employee__leave_request__leave_dates__date__year=year)
+                    employee__leave_request__leave_dates__date__year=year,
+                    employee__leave_request__status='A'
+                )
         if type == 'month':
             year = query_params.get('year')
             month = query_params.get('month')
             if year is not None and month is not None:
                 return base_query.filter(
                     employee__leave_request__leave_dates__date__year=year,
-                    employee__leave_request__leave_dates__date__month=month)
+                    employee__leave_request__leave_dates__date__month=month,
+                    employee__leave_request__status='A')
         if type == 'date':
             start_date = query_params.get('start-date')
             end_date = query_params.get('end-date')
@@ -80,7 +83,8 @@ def filter_leave_dates_by_type(base_query, query_params):
                 end_date = datetime.strptime(end_date, '%d-%m-%Y')
                 return base_query.filter(
                     employee__leave_request__leave_dates__date__gte=start_date,
-                    employee__leave_request__leave_dates__date__lte=end_date)
+                    employee__leave_request__leave_dates__date__lte=end_date,
+                    employee__leave_request__status='A')
     return base_query.none()
 
 
